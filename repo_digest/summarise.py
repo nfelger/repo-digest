@@ -55,7 +55,7 @@ def format_activity(activity: RepoActivity) -> str:
 
     if activity.commits:
         parts.append("\n## Commits to Main")
-        for commit in activity.commits:
+        for commit in activity.commits[:50]:
             parts.append(f"- {commit.sha}: {commit.message} (@{commit.author})")
 
     return "\n".join(parts)
