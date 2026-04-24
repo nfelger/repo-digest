@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repo-digest"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "typer[all]",
+    "httpx",
+    "litellm",
+    "rich",
+    "pyyaml",
+]
+
+[project.scripts]
+repo-digest = "repo_digest.cli:app"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
