@@ -1,6 +1,5 @@
-import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
@@ -58,6 +57,15 @@ class GitHubClient:
             trust_env=False,
         )
 
+    def close(self) -> None:
+        self._client.close()
+
+    def __enter__(self) -> "GitHubClient":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     def _get_paginated(self, path: str, params: dict | None = None) -> list[dict]:
         """Fetch all pages from a GitHub API path."""
         params = {**(params or {}), "per_page": 100}
@@ -70,6 +78,7 @@ class GitHubClient:
                 resp = self._client.get(url, params=params)
             resp.raise_for_status()
             results.extend(resp.json())
+            # params are encoded in the next-page URL from the Link header
             params = None
             url = None
             for part in resp.headers.get("link", "").split(","):
@@ -89,7 +98,9 @@ class GitHubClient:
                 continue
             merged_at = datetime.fromisoformat(item["merged_at"].replace("Z", "+00:00"))
             if merged_at < since:
-                break
+                # sort is by updated, not merged_at — a post-merge comment could push an
+                # old PR to the top, so skip rather than break
+                continue
             number = item["number"]
             files = [
                 f["filename"]
