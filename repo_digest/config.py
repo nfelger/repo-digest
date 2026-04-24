@@ -23,5 +23,5 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
     llm_data = data.get("llm", {})
     return Config(
         repos=data["repos"],
-        llm=LLMConfig(model=llm_data.get("model", "ollama/gemma4")),
+        llm=LLMConfig(**llm_data),
     )
