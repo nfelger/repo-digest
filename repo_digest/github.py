@@ -223,7 +223,9 @@ class GitHubClient:
 
 def fetch_all_repos(repos: list[str], since: datetime, token: str) -> list[RepoActivity]:
     """Fetch activity for all repos in parallel (up to 5 concurrent)."""
-    client = GitHubClient(token)
-    with ThreadPoolExecutor(max_workers=min(len(repos), 5)) as executor:
-        futures = [executor.submit(client.fetch_repo_activity, repo, since) for repo in repos]
-        return [f.result() for f in futures]
+    if not repos:
+        return []
+    with GitHubClient(token) as client:
+        with ThreadPoolExecutor(max_workers=min(len(repos), 5)) as executor:
+            futures = [executor.submit(client.fetch_repo_activity, repo, since) for repo in repos]
+            return [f.result() for f in futures]
