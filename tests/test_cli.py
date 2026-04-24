@@ -52,8 +52,6 @@ def test_run_outputs_per_repo(tmp_path, mocker):
 def test_missing_github_token_shows_error(tmp_path, mocker):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("repos:\n  - org/repo1\n")
-    mocker.patch.dict(os.environ, {}, clear=True)
-    # Ensure GITHUB_TOKEN not in env
     env = {k: v for k, v in os.environ.items() if k != "GITHUB_TOKEN"}
     mocker.patch.dict(os.environ, env, clear=True)
 
