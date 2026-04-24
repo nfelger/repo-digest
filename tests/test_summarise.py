@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 from repo_digest.github import PR, Issue, Commit, RepoActivity
-from repo_digest.summarise import format_activity, summarise_repo
+from repo_digest.summarise import format_activity, summarise_repo, synthesise, build_digest, Digest
 
 
 def make_activity():
@@ -88,3 +88,33 @@ def test_summarise_repo_calls_litellm(mocker):
     assert call_kwargs.kwargs["model"] == "ollama/gemma4"
     assert isinstance(result, str)
     assert "Alice shipped login" in result
+
+
+def test_synthesise_calls_litellm(mocker):
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "## Overview\n\nTwo repos shipped auth features."
+    mocker.patch("repo_digest.summarise.litellm.completion", return_value=mock_response)
+
+    repo_summaries = {
+        "org/repo1": "## org/repo1\n\nAlice shipped login.",
+        "org/repo2": "## org/repo2\n\nBob fixed auth bug.",
+    }
+    result = synthesise(repo_summaries, model="ollama/gemma4", since_str="Apr 17")
+
+    import repo_digest.summarise as s
+    s.litellm.completion.assert_called_once()
+    assert "Two repos shipped auth features" in result
+
+
+def test_build_digest(mocker):
+    activities = [make_activity(), RepoActivity(repo="org/repo2")]
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "mocked summary"
+    mocker.patch("repo_digest.summarise.litellm.completion", return_value=mock_response)
+
+    digest = build_digest(activities, model="ollama/gemma4", since_str="Apr 17")
+
+    assert isinstance(digest, Digest)
+    assert "org/myrepo" in digest.repo_summaries
+    assert "org/repo2" in digest.repo_summaries
+    assert isinstance(digest.overview, str)

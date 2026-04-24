@@ -85,3 +85,51 @@ Be specific. Name people and things. Do not use generic filler."""
         messages=[{"role": "user", "content": prompt}],
     )
     return response.choices[0].message.content
+
+
+def synthesise(repo_summaries: dict[str, str], model: str, since_str: str) -> str:
+    """Produce a cross-repo overview from per-repo summaries."""
+    summaries_text = "\n\n".join(
+        f"### {repo}\n{summary}" for repo, summary in repo_summaries.items()
+    )
+
+    prompt = f"""You are writing an executive overview for an engineering leader who follows multiple repos in their org.
+
+Period: {since_str} to today
+
+Here are summaries of recent activity across repositories:
+
+{summaries_text}
+
+Write a concise markdown overview (100-200 words):
+- Major themes or patterns across repos
+- Notable work or developments worth highlighting
+- Anything that stands out
+
+This appears at the top of the digest. Be specific and concise."""
+
+    response = litellm.completion(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.choices[0].message.content
+
+
+def build_digest(
+    activities: list[RepoActivity], model: str, since_str: str
+) -> Digest:
+    """Run the full two-stage summarisation pipeline."""
+    if not activities:
+        return Digest(overview="", repo_summaries={})
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(len(activities), 5)) as executor:
+        futures = {
+            activity.repo: executor.submit(summarise_repo, activity, model, since_str)
+            for activity in activities
+        }
+        repo_summaries = {repo: future.result() for repo, future in futures.items()}
+
+    overview = synthesise(repo_summaries, model=model, since_str=since_str)
+    return Digest(overview=overview, repo_summaries=repo_summaries)
