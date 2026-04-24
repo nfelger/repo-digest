@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import litellm
@@ -122,14 +123,12 @@ def build_digest(
     if not activities:
         return Digest(overview="", repo_summaries={})
 
-    from concurrent.futures import ThreadPoolExecutor
-
     with ThreadPoolExecutor(max_workers=min(len(activities), 5)) as executor:
-        futures = {
-            activity.repo: executor.submit(summarise_repo, activity, model, since_str)
+        futures = [
+            (activity.repo, executor.submit(summarise_repo, activity, model, since_str))
             for activity in activities
-        }
-        repo_summaries = {repo: future.result() for repo, future in futures.items()}
+        ]
+        repo_summaries = {repo: future.result() for repo, future in futures}
 
     overview = synthesise(repo_summaries, model=model, since_str=since_str)
     return Digest(overview=overview, repo_summaries=repo_summaries)
