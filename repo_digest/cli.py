@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -18,9 +17,9 @@ console = Console()
 @app.command()
 def main(
     since: str = typer.Option(..., "--since", help="Start of window: '7d', '2w', '1m', or ISO date like '2026-04-15'"),
-    config: Optional[Path] = typer.Option(None, "--config", help=f"Config file path (default: {DEFAULT_CONFIG_PATH})"),
+    config: Path = typer.Option(DEFAULT_CONFIG_PATH, "--config", help="Config file path"),
 ) -> None:
-    config_path = config or DEFAULT_CONFIG_PATH
+    config_path = config
 
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
